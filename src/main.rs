@@ -1,4 +1,6 @@
 use std::convert::TryInto;
+use std::ffi::CString;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::{fs, process};
 use structopt::clap::{Error as ClapError, ErrorKind as ClapErrorKind};
@@ -7,11 +9,13 @@ use structopt::StructOpt;
 #[derive(Debug)]
 struct App {
     force: bool,
+    no_clobber: bool,
+    interactive: bool,
     verbose: bool,
     operations: Vec<(PathBuf, PathBuf)>,
 }
 
-/// mv but without cp fallback.
+/// mv(1) but without cp(1) fallback. Simple wrapper of rename(2)/renameat2(2).
 #[derive(StructOpt, Debug)]
 #[structopt(usage = "\
     rawmv [OPTION]... [-T] <SOURCE> <DEST>
@@ -20,8 +24,15 @@ struct App {
 ")]
 struct RawOpt {
     /// Do not prompt before overwriting.
+    /// Note that unlike mv(1), without this flag, we raise error if destination exists.
     #[structopt(long, short)]
     force: bool,
+    /// Silently skip files whose destination exists.
+    #[structopt(long, short, conflicts_with_all = &["force", "interactive"])]
+    no_clobber: bool,
+    /// Prompt before overwrite.
+    #[structopt(long, short, conflicts_with = "force")]
+    interactive: bool,
     /// Print what is being done.
     #[structopt(long, short)]
     verbose: bool,
@@ -31,7 +42,12 @@ struct RawOpt {
     #[structopt(long, short = "T")]
     no_target_directory: bool,
     /// Move all files into this directory.
-    #[structopt(long, short = "t", name = "DIRECTORY", conflicts_with = "no-target-directory")]
+    #[structopt(
+        long,
+        short = "t",
+        name = "DIRECTORY",
+        conflicts_with = "no-target-directory"
+    )]
     target_directory: Option<PathBuf>,
 
     #[structopt(hidden = true)]
@@ -43,6 +59,8 @@ impl App {
         let mut opt = RawOpt::from_args_safe()?;
         let mut this = Self {
             force: opt.force,
+            no_clobber: opt.no_clobber,
+            interactive: opt.interactive,
             verbose: opt.verbose,
             operations: Vec::with_capacity(opt.files.len()),
         };
@@ -117,14 +135,26 @@ impl App {
 fn main() {
     let app = App::parse_args().unwrap_or_else(|err| ClapError::exit(&err));
 
-    if !app.force {
-        eprintln!("Rename without --force is not implemented yet");
-        process::exit(1);
-    }
-
     let mut failed = false;
     for (src, dest) in &app.operations {
-        match fs::rename(src, dest) {
+        let mut ret = do_rename(src, dest, app.force);
+        if !app.force && matches!(&ret, Err(err) if err.kind() == io::ErrorKind::AlreadyExists) {
+            if app.no_clobber {
+                continue;
+            } else if app.interactive {
+                eprint!("Overwrite {:?} -> {:?} ? [y/N] ", src, dest);
+                let _ = io::stderr().flush();
+                let mut input = String::new();
+                let _ = io::stdin().read_line(&mut input);
+                if input.trim() == "y" {
+                    ret = do_rename(src, dest, true);
+                } else {
+                    continue;
+                }
+            }
+        }
+
+        match ret {
             Ok(()) => {
                 if app.verbose {
                     eprintln!("Renamed {:?} -> {:?}", src, dest);
@@ -139,5 +169,27 @@ fn main() {
 
     if failed {
         process::exit(1);
+    }
+}
+
+#[cfg(unix)]
+fn do_rename(src: &Path, dest: &Path, overwrite: bool) -> io::Result<()> {
+    use std::os::unix::ffi::OsStrExt;
+    let src_c = CString::new(src.as_os_str().as_bytes()).unwrap();
+    let dest_c = CString::new(dest.as_os_str().as_bytes()).unwrap();
+    let flag = if overwrite { 0 } else { libc::RENAME_NOREPLACE };
+    let ret = unsafe {
+        libc::renameat2(
+            libc::AT_FDCWD,
+            src_c.as_ptr(),
+            libc::AT_FDCWD,
+            dest_c.as_ptr(),
+            flag,
+        )
+    };
+    if ret == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
     }
 }
