@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 use std::convert::TryInto;
 use std::ffi::CString;
 use std::io::{self, Write};
@@ -21,6 +22,10 @@ struct App {
     rawmv [OPTION]... [-T] <SOURCE> <DEST>
     rawmv [OPTION]... <SOURCE>... <DIRECTORY>
     rawmv [OPTION]... -t <DIRECTORY> <SOURCE>...\
+", after_help = "\
+Copyright (C) 2021 oxalica<oxalicc@pm.me>
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 ")]
 struct RawOpt {
     /// Do not prompt before overwriting.
