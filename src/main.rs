@@ -18,15 +18,18 @@ struct App {
 
 /// mv(1) but without cp(1) fallback. Simple wrapper of rename(2)/renameat2(2).
 #[derive(StructOpt, Debug)]
-#[structopt(usage = "\
+#[structopt(
+    usage = "\
     rawmv [OPTION]... [-T] <SOURCE> <DEST>
     rawmv [OPTION]... <SOURCE>... <DIRECTORY>
     rawmv [OPTION]... -t <DIRECTORY> <SOURCE>...\
-", after_help = "\
+",
+    after_help = "\
 Copyright (C) 2021 oxalica<oxalicc@pm.me>
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3.
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-")]
+"
+)]
 struct RawOpt {
     /// Do not prompt before overwriting.
     /// Note that unlike mv(1), without this flag, we raise error if destination exists.
