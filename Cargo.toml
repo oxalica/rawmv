@@ -5,7 +5,7 @@ edition = "2018"
 license = "GPL-3.0-only"
 readme = "README.md"
 repository = "https://github.com/oxalica/rawmv"
-description = "mv(1) but without cp(1) fallback. Simple wrapper of rename(2)/renameat2(2)."
+description = "mv(1) but without cp(1) fallback. Simple wrapper of renameat2(2)."
 keywords = ["utilities", "coreutils", "mv"]
 categories = ["command-line-interface", "command-line-utilities"]
 

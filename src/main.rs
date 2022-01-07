@@ -22,7 +22,7 @@ impl App {
         format!(
             "\
 rawmv {version}
-mv(1) but without cp(1) fallback. Simple wrapper of rename(2)/renameat2(2).
+mv(1) but without cp(1) fallback. Simple wrapper of renameat2(2).
 
 USAGE:
     rawmv [OPTION]... [-T] <SOURCE> <DEST>
@@ -201,21 +201,25 @@ fn main() {
     }
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 fn do_rename(src: &Path, dest: &Path, overwrite: bool) -> io::Result<()> {
     use std::os::unix::ffi::OsStrExt;
+
     let src_c = CString::new(src.as_os_str().as_bytes()).unwrap();
     let dest_c = CString::new(dest.as_os_str().as_bytes()).unwrap();
-    let flag = if overwrite { 0 } else { libc::RENAME_NOREPLACE };
+
     let ret = unsafe {
-        libc::renameat2(
+        // Do a direct syscall here since MUSL doesn't have its wrapper.
+        libc::syscall(
+            libc::SYS_renameat2,
             libc::AT_FDCWD,
             src_c.as_ptr(),
             libc::AT_FDCWD,
             dest_c.as_ptr(),
-            flag,
+            if overwrite { 0 } else { libc::RENAME_NOREPLACE },
         )
     };
+
     if ret == 0 {
         Ok(())
     } else {
