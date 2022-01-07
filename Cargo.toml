@@ -9,9 +9,7 @@ description = "mv(1) but without cp(1) fallback. Simple wrapper of rename(2)/ren
 keywords = ["utilities", "coreutils", "mv"]
 categories = ["command-line-interface", "command-line-utilities"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+anyhow = "1.0.52"
 libc = "0.2.106"
-structopt = { version = "0.3.25", default-features = false }
-
+pico-args = { version = "0.4", default-features = false, features = ["combined-flags"] }
