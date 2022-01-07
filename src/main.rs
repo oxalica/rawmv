@@ -102,11 +102,11 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
         ensure!(
             !this.force || !this.no_clobber,
-            "'-f' and '-n' are exclusive"
+            "Cannot use '--force' and '--no-clobber' together"
         );
         ensure!(
             target_directory.is_none() || !no_target_directory,
-            "'-T' and '-t' are exclusive"
+            "Cannot use '--no-target-directory' and '--target-directory' together"
         );
 
         let mut positionals = args
@@ -117,9 +117,9 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
             .collect::<Vec<PathBuf>>();
 
         if no_target_directory {
-            let [src, dest]: [_; 2] = positionals
-                .try_into()
-                .map_err(|_| anyhow!("'-T' expects exact 2 file operands"))?;
+            let [src, dest]: [_; 2] = positionals.try_into().map_err(|_| {
+                anyhow!("Expect exact 2 operands when using '--no-target-directory'")
+            })?;
             this.operations.push((src, dest));
         } else if let Some(target_dir) = target_directory {
             ensure!(!positionals.is_empty(), "Missing file operand");
@@ -150,7 +150,7 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
         for src in srcs {
             let base = src
                 .file_name()
-                .ok_or_else(|| anyhow!("Source path doesn't have base name: {}", src.display()))?;
+                .ok_or_else(|| anyhow!("Source doesn't have base name: {}", src.display()))?;
             let dest = target_dir.join(base);
             self.operations.push((src, dest));
         }
@@ -160,7 +160,7 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 fn main() {
     let app = App::parse_env().unwrap_or_else(|err| {
-        eprintln!("{}", err);
+        eprintln!("rawmv: {}", err);
         process::exit(1);
     });
 
@@ -171,7 +171,7 @@ fn main() {
             if app.no_clobber {
                 continue;
             } else if app.interactive {
-                eprint!("Overwrite {:?} -> {:?} ? [y/N] ", src, dest);
+                eprint!("rawmv: Overwrite {:?} -> {:?} ? [y/N] ", src, dest);
                 let _ = io::stderr().flush();
                 let mut input = String::new();
                 let _ = io::stdin().read_line(&mut input);
@@ -186,11 +186,11 @@ fn main() {
         match ret {
             Ok(()) => {
                 if app.verbose {
-                    eprintln!("Renamed {:?} -> {:?}", src, dest);
+                    eprintln!("rawmv: Renamed {:?} -> {:?}", src, dest);
                 }
             }
             Err(err) => {
-                eprintln!("Cannot rename {:?} -> {:?}: {}", src, dest, err);
+                eprintln!("rawmv: Cannot rename {:?} -> {:?}: {}", src, dest, err);
                 failed = true;
             }
         }
@@ -274,11 +274,11 @@ mod tests {
         );
         assert_eq!(
             parse(&["-T", "/"]).unwrap_err(),
-            "'-T' expects exact 2 file operands",
+            "Expect exact 2 operands when using '--no-target-directory'",
         );
         assert_eq!(
             parse(&["-T", "/", "/", "/"]).unwrap_err(),
-            "'-T' expects exact 2 file operands",
+            "Expect exact 2 operands when using '--no-target-directory'",
         );
     }
 
@@ -287,7 +287,7 @@ mod tests {
         assert_eq!(parse(&["-t", "/"]).unwrap_err(), "Missing file operand",);
         assert_eq!(
             parse(&["-T", "-t", "/"]).unwrap_err(),
-            "'-T' and '-t' are exclusive",
+            "Cannot use '--no-target-directory' and '--target-directory' together",
         );
         assert_eq!(
             parse(&["foo", "-t"]).unwrap_err(),
@@ -334,7 +334,7 @@ mod tests {
 
         assert_eq!(
             parse(&["-f", "foo", "/", "-n"]).unwrap_err(),
-            "'-f' and '-n' are exclusive"
+            "Cannot use '--force' and '--no-clobber' together"
         );
     }
 
