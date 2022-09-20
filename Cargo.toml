@@ -1,9 +1,8 @@
 [package]
 name = "rawmv"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 license = "GPL-3.0-only"
-readme = "README.md"
 repository = "https://github.com/oxalica/rawmv"
 description = "mv(1) but without cp(1) fallback. Simple wrapper of renameat2(2)."
 keywords = ["utilities", "coreutils", "mv"]
@@ -12,4 +11,4 @@ categories = ["command-line-interface", "command-line-utilities"]
 [dependencies]
 anyhow = "1.0.52"
 libc = "0.2.106"
-pico-args = { version = "0.4", default-features = false, features = ["combined-flags"] }
+pico-args = { version = "0.5", default-features = false, features = ["combined-flags"] }
