@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use std::convert::TryInto;
-use std::ffi::{CString, OsString};
+use std::ffi::OsString;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
@@ -201,30 +201,16 @@ fn main() {
     }
 }
 
-#[cfg(target_os = "linux")]
 fn do_rename(src: &Path, dest: &Path, overwrite: bool) -> io::Result<()> {
-    use std::os::unix::ffi::OsStrExt;
+    use rustix::fs;
 
-    let src_c = CString::new(src.as_os_str().as_bytes()).unwrap();
-    let dest_c = CString::new(dest.as_os_str().as_bytes()).unwrap();
-
-    let ret = unsafe {
-        // Do a direct syscall here since MUSL doesn't have its wrapper.
-        libc::syscall(
-            libc::SYS_renameat2,
-            libc::AT_FDCWD,
-            src_c.as_ptr(),
-            libc::AT_FDCWD,
-            dest_c.as_ptr(),
-            if overwrite { 0 } else { libc::RENAME_NOREPLACE },
-        )
-    };
-
-    if ret == 0 {
-        Ok(())
+    let flags = if overwrite {
+        fs::RenameFlags::empty()
     } else {
-        Err(io::Error::last_os_error())
-    }
+        fs::RenameFlags::NOREPLACE
+    };
+    fs::renameat_with(fs::cwd(), src, fs::cwd(), dest, flags)?;
+    Ok(())
 }
 
 #[cfg(test)]

@@ -10,5 +10,5 @@ categories = ["command-line-interface", "command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0.52"
-libc = "0.2.106"
 pico-args = { version = "0.5", default-features = false, features = ["combined-flags"] }
+rustix = { version = "0.37.19", default-features = false, features = ["fs", "std"] }
