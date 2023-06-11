@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#![warn(clippy::pedantic)]
 use std::convert::TryInto;
 use std::ffi::OsString;
 use std::io::{self, Write};
@@ -8,6 +9,9 @@ use std::process;
 use anyhow::{anyhow, bail, ensure, Result};
 use pico_args::Arguments;
 
+// We truly want boolean productions, not one-at-a-time.
+// See: https://github.com/rust-lang/rust-clippy/issues/10923
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 struct App {
     force: bool,
@@ -62,10 +66,7 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
     }
 
     fn parse_args<I: IntoIterator<Item = S>, S: Into<OsString>>(args: I) -> Result<Self> {
-        let mut raw_args = args
-            .into_iter()
-            .map(|s| s.into())
-            .collect::<Vec<OsString>>();
+        let mut raw_args = args.into_iter().map(Into::into).collect::<Vec<OsString>>();
         let tail_positionals = match raw_args.iter().position(|s| s == "--") {
             None => Vec::new(),
             Some(pos) => {
@@ -113,7 +114,7 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
             .finish()
             .into_iter()
             .chain(tail_positionals)
-            .map(|path| path.into())
+            .map(Into::into)
             .collect::<Vec<PathBuf>>();
 
         if no_target_directory {
@@ -160,7 +161,7 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 fn main() {
     let app = App::parse_env().unwrap_or_else(|err| {
-        eprintln!("rawmv: {}", err);
+        eprintln!("rawmv: {err}");
         process::exit(1);
     });
 
@@ -171,7 +172,7 @@ fn main() {
             if app.no_clobber {
                 continue;
             } else if app.interactive {
-                eprint!("rawmv: Overwrite {:?} -> {:?} ? [y/N] ", src, dest);
+                eprint!("rawmv: Overwrite {src:?} -> {dest:?} ? [y/N] ");
                 let _ = io::stderr().flush();
                 let mut input = String::new();
                 let _ = io::stdin().read_line(&mut input);
@@ -186,11 +187,11 @@ fn main() {
         match ret {
             Ok(()) => {
                 if app.verbose {
-                    eprintln!("rawmv: Renamed {:?} -> {:?}", src, dest);
+                    eprintln!("rawmv: Renamed {src:?} -> {dest:?}");
                 }
             }
             Err(err) => {
-                eprintln!("rawmv: Cannot rename {:?} -> {:?}: {}", src, dest, err);
+                eprintln!("rawmv: Cannot rename {src:?} -> {dest:?}: {err}");
                 failed = true;
             }
         }
