@@ -210,7 +210,7 @@ fn do_rename(src: &Path, dest: &Path, overwrite: bool) -> io::Result<()> {
     } else {
         fs::RenameFlags::NOREPLACE
     };
-    fs::renameat_with(fs::cwd(), src, fs::cwd(), dest, flags)?;
+    fs::renameat_with(fs::CWD, src, fs::CWD, dest, flags)?;
     Ok(())
 }
 
