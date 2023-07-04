@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #![warn(clippy::pedantic)]
+#![allow(unknown_lints)]
+#![allow(clippy::tuple_array_conversions)]
 use std::convert::TryInto;
 use std::ffi::OsString;
 use std::io::{self, Write};
